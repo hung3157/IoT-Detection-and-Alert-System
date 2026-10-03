@@ -1,31 +1,29 @@
 # IoT Sentinel
 
-**IoT Sentinel** là một hệ thống cầm tay sử dụng ESP32, được thiết kế để quan sát hoạt động Wi-Fi 2.4 GHz xung quanh, theo dõi các thiết bị phát hiện được, xử lý tín hiệu RSSI, ước lượng độ gần tương đối và đưa ra cảnh báo đối với các hoạt động không dây chưa xác định hoặc có dấu hiệu đáng chú ý.
+**IoT Sentinel** là hệ thống cầm tay sử dụng ESP32 để quan sát hoạt động Wi-Fi 2.4 GHz xung quanh, theo dõi các thiết bị phát hiện được, xử lý tín hiệu RSSI, ước lượng độ gần tương đối và đưa ra cảnh báo đối với các thiết bị hoặc hoạt động không dây chưa xác định.
 
-Dự án tập trung vào các nội dung chính:
+Dự án tập trung vào:
 
 - Lập trình nhúng trên ESP32
 - Thu thập và quan sát tín hiệu Wi-Fi
 - Quan sát khung IEEE 802.11
 - Xử lý tín hiệu RSSI
 - Theo dõi thiết bị
-- Phân tích kênh Wi-Fi
+- Phân tích Wi-Fi channel
 - Giao diện người dùng nhúng
-- Mở rộng kiến thức Cấu kiện điện tử / ET2041E
+- Mở rộng kiến thức Cấu kiện điện tử ET2041E
 - Đo đạc và kiểm chứng thực nghiệm
 
-> **Lưu ý quan trọng:** IoT Sentinel không phải là radar phản xạ sóng theo nghĩa truyền thống.  
-> Hệ thống không thể xác định chính xác bản chất vật lý của một thiết bị và không thể kết luận một thiết bị là camera, microphone hay thiết bị giám sát chỉ dựa trên địa chỉ MAC hoặc RSSI.  
-> Khoảng cách suy ra từ RSSI chỉ được coi là **khoảng cách ước lượng**.
+> **Lưu ý:** IoT Sentinel không phải radar phản xạ sóng theo nghĩa truyền thống. Hệ thống không thể xác định chính xác một thiết bị là camera, microphone hay thiết bị giám sát chỉ dựa trên địa chỉ MAC hoặc RSSI. Khoảng cách suy ra từ RSSI chỉ được coi là **khoảng cách ước lượng**.
 
 ---
 
 # 1. Thành viên nhóm
 
-## Thành viên A — Phụ trách Wi-Fi / Firmware
+## Thành viên A — Wi-Fi / Firmware
 
 **Hoàng Nguyễn Thành Hưng**  
-MSSV: **202514818**
+**MSSV:** 202514818
 
 Nhiệm vụ chính:
 
@@ -35,34 +33,32 @@ Nhiệm vụ chính:
 - Quan sát khung IEEE 802.11
 - Channel hopping
 - Xử lý MAC/BSSID
-- Quản lý và theo dõi thiết bị
-- Tích hợp toàn bộ hệ thống
+- Quản lý thiết bị
+- Tích hợp hệ thống
 
----
-
-## Thành viên B — Phụ trách Xử lý tín hiệu / Phần cứng
+## Thành viên B — Xử lý tín hiệu / Phần cứng
 
 **Mai Thái Huy**  
-MSSV: **202514824**
+**MSSV:** 202514824
 
 Nhiệm vụ chính:
 
 - Xử lý tín hiệu RSSI
-- Bộ lọc Moving Average
+- Moving Average Filter
 - Ước lượng khoảng cách
 - Hiệu chuẩn RSSI
 - Đo đạc thực nghiệm
-- Giao diện OLED
+- OLED và giao diện
 - Phần cứng cảnh báo
-- Phần mở rộng Cấu kiện điện tử ET2041E
+- Phần mở rộng ET2041E
 
 ---
 
 # 2. Mục tiêu dự án
 
-Hệ thống hoàn chỉnh hướng tới pipeline xử lý sau:
+Pipeline xử lý chính của hệ thống:
 
-```text
+~~~text
 Môi trường Wi-Fi 2.4 GHz
             ↓
        Bộ thu ESP32
@@ -82,41 +78,55 @@ Môi trường Wi-Fi 2.4 GHz
       Đánh giá rủi ro
             ↓
        OLED / Cảnh báo
-```
+~~~
 
 Ở phiên bản nâng cao:
 
-```text
+~~~text
 Khung IEEE 802.11
         ↓
  Promiscuous Mode
         ↓
   Channel Hopping
         ↓
-MAC + RSSI + Metadata khung
+MAC + RSSI + Frame Metadata
         ↓
   Radio Observation
         ↓
-   Theo dõi thiết bị
+   Device Tracking
         ↓
-  Phân tích hoạt động
+  Activity Analysis
         ↓
-   Đánh giá rủi ro
-```
+    Risk Evaluation
+~~~
 
 ---
 
 # 3. Nguyên tắc thiết kế cốt lõi
 
-Dự án được thiết kế theo kiến trúc **module hóa**.
+Dự án sử dụng kiến trúc **module hóa**.
 
-Các tầng xử lý phía trên không được phụ thuộc trực tiếp vào phương pháp thu thập dữ liệu Wi-Fi.
+Các module xử lý phía trên không phụ thuộc trực tiếp vào cách dữ liệu Wi-Fi được thu thập.
 
-Cả Wi-Fi Scanner ở giai đoạn đầu và Promiscuous Sniffer ở giai đoạn sau đều phải tạo ra một cấu trúc dữ liệu trung gian thống nhất.
+Ở giai đoạn đầu, ESP32 sử dụng:
+
+~~~cpp
+WiFi.scanNetworks();
+~~~
+
+Sau này, tầng thu thập dữ liệu sẽ được nâng cấp sang:
+
+~~~text
+Promiscuous Mode
++
+Channel Hopping
+~~~
+
+Cả hai phương pháp đều phải chuyển dữ liệu về một định dạng trung gian chung.
 
 Ví dụ:
 
-```cpp
+~~~cpp
 struct RadioObservation {
     uint8_t mac[6];
 
@@ -128,17 +138,17 @@ struct RadioObservation {
     bool hasSSID;
     String ssid;
 };
-```
+~~~
 
-Pipeline xử lý khi đó có dạng:
+Pipeline khi đó trở thành:
 
-```text
+~~~text
 WiFi.scanNetworks()
         ↓
 RadioObservation
         ↓
 
-hoặc
+        hoặc
 
 Promiscuous Sniffer
         ↓
@@ -154,9 +164,9 @@ Distance Estimator
 Risk Engine
         ↓
 User Interface
-```
+~~~
 
-Nhờ kiến trúc này, phương pháp thu thập dữ liệu có thể được nâng cấp mà không cần viết lại toàn bộ hệ thống.
+Nhờ kiến trúc này, khi chuyển từ Wi-Fi Scanner sang Promiscuous Sniffer, các module như Device Manager, RSSI Filter, Distance Estimator, Risk Engine và OLED vẫn có thể được tái sử dụng.
 
 ---
 
@@ -164,7 +174,7 @@ Nhờ kiến trúc này, phương pháp thu thập dữ liệu có thể đượ
 
 Dự án được chia thành **6 phase kỹ thuật chính**.
 
-Mỗi phase phải tạo ra một phiên bản có thể chạy và kiểm thử được trước khi chuyển sang phase tiếp theo.
+Mỗi phase phải tạo ra một phiên bản chạy được và có thể kiểm thử trước khi chuyển sang phase tiếp theo.
 
 ---
 
@@ -172,42 +182,38 @@ Mỗi phase phải tạo ra một phiên bản có thể chạy và kiểm thử
 
 ## Mục tiêu
 
-Xây dựng phương pháp thu thập dữ liệu Wi-Fi đơn giản nhất nhằm kiểm tra phần cứng ESP32 và tạo nguồn dữ liệu vô tuyến ổn định cho các bước xử lý tiếp theo.
+Xây dựng tầng thu thập dữ liệu Wi-Fi đơn giản nhất để:
 
-Ở phase này, hệ thống sử dụng:
+- Kiểm tra hoạt động Wi-Fi của ESP32
+- Thu được SSID
+- Thu được BSSID
+- Thu được RSSI
+- Thu được channel
+- Thêm timestamp
+- Tạo dữ liệu `RadioObservation`
+- Scan Wi-Fi định kỳ
 
-```cpp
+Ở phase này sử dụng:
+
+~~~cpp
 WiFi.scanNetworks();
-```
+~~~
 
-Đây chỉ là **prototype của tầng thu thập dữ liệu**, chưa phải phương pháp phát hiện cuối cùng.
-
-Mục tiêu của phase này là kiểm chứng:
-
-- Hoạt động Wi-Fi của ESP32
-- Thu thập BSSID
-- Thu thập RSSI
-- Thu thập thông tin channel
-- Quét Wi-Fi định kỳ
-- Cấu trúc `RadioObservation`
-
----
+Đây là **prototype của tầng acquisition**, không phải phương pháp phát hiện cuối cùng.
 
 ## Dữ liệu cần thu thập
 
-ESP32 phải lấy được:
-
-```text
+~~~text
 SSID
 BSSID
 RSSI
 Channel
 Timestamp
-```
+~~~
 
 Ví dụ:
 
-```text
+~~~text
 === WIFI SCAN ===
 
 1. HomeWiFi
@@ -215,13 +221,11 @@ Ví dụ:
 BSSID : AA:BB:CC:DD:EE:FF
 RSSI  : -47 dBm
 CH    : 6
-```
-
----
+~~~
 
 ## Thành viên A — Hưng
 
-### Công việc Firmware
+### Công việc
 
 - Tạo project PlatformIO
 - Cấu hình ESP32
@@ -232,12 +236,13 @@ CH    : 6
 - Đọc RSSI
 - Đọc channel
 - Thêm timestamp
-- Chuyển kết quả scan thành `RadioObservation`
-- Triển khai cơ chế scan định kỳ
+- Tạo cấu trúc `RadioObservation`
+- Chuyển kết quả scan sang `RadioObservation`
+- Triển khai scan định kỳ
 
 Cấu trúc file đề xuất:
 
-```text
+~~~text
 src/
 ├── main.cpp
 └── wifi_scanner.cpp
@@ -245,26 +250,22 @@ src/
 include/
 ├── radio_observation.h
 └── wifi_scanner.h
-```
-
----
+~~~
 
 ## Thành viên B — Huy
 
-### Công việc kiểm thử
+### Công việc
 
 - Kiểm tra kết quả Wi-Fi scan
-- Quan sát sự dao động của RSSI
-- So sánh RSSI tại nhiều vị trí khác nhau
+- Quan sát dao động RSSI
+- So sánh RSSI tại nhiều vị trí
 - Ghi lại các Wi-Fi channel quan sát được
-- Thu thập dữ liệu thử nghiệm
-- Chuẩn bị thí nghiệm hiệu chuẩn RSSI đầu tiên
+- Thu thập dữ liệu kiểm thử
+- Chuẩn bị thí nghiệm hiệu chuẩn RSSI
 
----
+## Output
 
-## Kết quả Phase 1
-
-```text
+~~~text
 ESP32
   ↓
 Wi-Fi Scan
@@ -272,20 +273,19 @@ Wi-Fi Scan
 RadioObservation
   ↓
 Serial Monitor
-```
-
----
+~~~
 
 ## Điều kiện hoàn thành
 
-Phase 1 được coi là hoàn thành khi:
+Phase 1 hoàn thành khi:
 
-- ESP32 có thể scan lặp lại ổn định
-- Firmware không crash trong điều kiện kiểm thử thông thường
-- BSSID được đọc chính xác
-- RSSI được thu thập
-- Channel được thu thập
-- Kết quả scan được chuyển sang cấu trúc dữ liệu chung
+- ESP32 có thể scan Wi-Fi lặp lại ổn định
+- Firmware không crash trong quá trình test thông thường
+- Đọc được BSSID
+- Đọc được RSSI
+- Đọc được channel
+- Có timestamp
+- Dữ liệu được chuyển thành `RadioObservation`
 - Có log dữ liệu kiểm thử
 
 ---
@@ -294,15 +294,11 @@ Phase 1 được coi là hoàn thành khi:
 
 ## Mục tiêu
 
-Chuyển các quan sát Wi-Fi riêng lẻ thành các bản ghi thiết bị có trạng thái theo thời gian, đồng thời xử lý chuỗi RSSI thu được.
+Chuyển các observation riêng lẻ thành các thiết bị có trạng thái được theo dõi theo thời gian.
 
-Hệ thống không còn coi mỗi lần scan là một sự kiện độc lập.
+Pipeline:
 
----
-
-## Pipeline xử lý
-
-```text
+~~~text
 RadioObservation
         ↓
 Device Manager
@@ -314,15 +310,11 @@ Moving Average
 Filtered RSSI
         ↓
 Distance Estimate
-```
-
----
+~~~
 
 ## Cấu trúc dữ liệu thiết bị
 
-Ví dụ:
-
-```cpp
+~~~cpp
 struct Device {
     uint8_t mac[6];
 
@@ -336,128 +328,100 @@ struct Device {
 
     unsigned long firstSeen;
     unsigned long lastSeen;
-
     unsigned long seenCount;
 
     bool known;
 };
-```
+~~~
 
-Địa chỉ MAC phải được sử dụng làm định danh chính của thiết bị.
+MAC được sử dụng làm định danh chính.
 
-SSID chỉ được coi là metadata bổ sung và có thể không tồn tại.
+SSID chỉ là metadata bổ sung.
 
----
-
-## Lọc tín hiệu RSSI
+## Lọc RSSI
 
 Bộ lọc ban đầu:
 
-```text
+~~~text
 Moving Average
 N = 8 mẫu
-```
+~~~
 
 Công thức:
 
-```text
+~~~text
 y[n] = (1/N) Σ x[n-k]
-```
+~~~
 
-Khuyến nghị triển khai bằng:
+Nên triển khai bằng:
 
-```text
+~~~text
 Circular Buffer
 +
 Running Sum
-```
-
-để giảm số phép tính không cần thiết.
-
----
+~~~
 
 ## Ước lượng khoảng cách
 
-Sử dụng mô hình suy hao theo khoảng cách dạng log:
+Sử dụng mô hình Log-Distance Path Loss:
 
-```text
+~~~text
 d = 10 ^ ((RSSI_1m - RSSI_filtered) / (10 × n))
-```
+~~~
 
 Trong đó:
 
-```text
-d
-```
+- `d`: khoảng cách ước lượng
+- `RSSI_1m`: RSSI thực nghiệm tại khoảng cách 1 mét
+- `RSSI_filtered`: RSSI sau khi lọc
+- `n`: hệ số suy hao môi trường
 
-là khoảng cách ước lượng,
+Khoảng cách phải được hiển thị dưới dạng:
 
-```text
-RSSI_1m
-```
-
-là RSSI đo được thực nghiệm tại khoảng cách 1 mét,
-
-và:
-
-```text
-n
-```
-
-là hệ số suy hao môi trường.
-
-Kết quả phải được ghi rõ là:
-
-```text
+~~~text
 DIST EST
-```
+~~~
 
-thay vì coi đó là khoảng cách chính xác.
-
----
+không được coi là khoảng cách chính xác tuyệt đối.
 
 ## Thành viên A — Hưng
 
-### Device Management
+### Device Manager
 
 - Thiết kế bảng thiết bị
-- Định danh thiết bị bằng MAC/BSSID
+- Tìm thiết bị bằng MAC/BSSID
 - Thêm thiết bị mới
 - Cập nhật thiết bị đã tồn tại
 - Quản lý `firstSeen`
 - Quản lý `lastSeen`
 - Quản lý `seenCount`
-- Triển khai timeout cho thiết bị
-- Kết nối `RadioObservation` với bảng thiết bị
-
----
+- Triển khai device timeout
+- Kết nối `RadioObservation` với Device Manager
 
 ## Thành viên B — Huy
 
 ### Xử lý tín hiệu
 
-- Triển khai bộ lọc Moving Average
-- Triển khai circular buffer cho RSSI
-- Triển khai thuật toán ước lượng khoảng cách
-- Thực hiện hiệu chuẩn RSSI
-- Đo RSSI tại nhiều khoảng cách xác định
-- Xác định `RSSI_1m` phù hợp
-- Ước lượng hệ số suy hao môi trường `n`
+- Triển khai Moving Average Filter
+- Triển khai circular buffer
+- Triển khai Distance Estimator
+- Hiệu chuẩn RSSI
+- Đo RSSI tại nhiều khoảng cách
+- Xác định `RSSI_1m`
+- Ước lượng hệ số `n`
 
-Các khoảng cách thí nghiệm đề xuất:
+Khoảng cách thí nghiệm đề xuất:
 
-```text
+~~~text
 1 m
 2 m
 3 m
 5 m
-```
-
----
+~~~
 
 ## Cấu trúc file đề xuất
 
-```text
+~~~text
 src/
 ├── device_manager.cpp
 ├── rssi_filter.cpp
@@ -467,13 +431,11 @@ include/
 ├── device_manager.h
 ├── rssi_filter.h
 └── distance_estimator.h
-```
+~~~
 
----
+## Output dự kiến
 
-## Ví dụ kết quả
-
-```text
+~~~text
 DEVICE
 
 MAC:
@@ -493,109 +455,97 @@ DIST EST:
 
 SEEN:
 42
-```
-
----
+~~~
 
 ## Điều kiện hoàn thành
 
 Phase 2 hoàn thành khi:
 
-- Không tạo dư thừa nhiều bản ghi cho cùng một thiết bị
-- Thiết bị được theo dõi theo thời gian
+- Không tạo nhiều bản ghi dư thừa cho cùng một MAC
+- Device Manager hoạt động
 - `seenCount` hoạt động
 - `lastSeen` hoạt động
 - Device timeout hoạt động
-- Bộ lọc RSSI hoạt động
-- RSSI sau lọc ổn định hơn RSSI thô
-- Có thể ước lượng khoảng cách
-- Đã thu thập dữ liệu calibration thực nghiệm
+- RSSI Filtering hoạt động
+- RSSI sau lọc ổn định hơn RSSI raw
+- Có Distance Estimate
+- Đã có dữ liệu calibration thực nghiệm
 
 ---
 
-# PHASE 3 — Phân loại thiết bị, đánh giá rủi ro và giao diện người dùng
+# PHASE 3 — Phân loại thiết bị, đánh giá rủi ro và giao diện
 
 ## Mục tiêu
 
-Biến pipeline xử lý thành một thiết bị giám sát cầm tay có thể sử dụng độc lập.
-
----
+Biến core firmware thành một thiết bị cầm tay có thể sử dụng độc lập.
 
 ## Phân loại thiết bị
 
-Ở giai đoạn đầu chỉ sử dụng phân loại thận trọng:
+Phân loại ban đầu:
 
-```text
+~~~text
 KNOWN
 UNKNOWN
-```
+~~~
 
-Hệ thống không tự động kết luận một địa chỉ MAC là:
+Không tự động kết luận thiết bị là:
 
-```text
+~~~text
 CAMERA
 MICROPHONE
 SPY DEVICE
-```
+~~~
 
-khi chưa có đủ bằng chứng kỹ thuật.
+chỉ dựa trên MAC hoặc RSSI.
 
----
+## Risk Engine
 
-## Đánh giá rủi ro
+Có thể sử dụng Risk Score dạng heuristic.
 
-Dự án có thể sử dụng một **Risk Score dạng heuristic**.
+Các yếu tố:
 
-Các yếu tố có thể bao gồm:
-
-```text
-Thiết bị UNKNOWN
-RSSI mạnh
-Xuất hiện liên tục
-RSSI có xu hướng tăng
-Mức độ hoạt động cao
-```
+~~~text
+Unknown Device
+Strong RSSI
+Persistent Presence
+Increasing RSSI
+High Activity
+~~~
 
 Ví dụ:
 
-```text
+~~~text
 UNKNOWN             +30
 STRONG RSSI         +25
 PERSISTENT          +20
 APPROACHING         +15
 HIGH ACTIVITY       +10
-```
+~~~
 
-Các mức:
+Phân mức:
 
-```text
+~~~text
 0–30    LOW
 31–60   MEDIUM
 61–100  HIGH
-```
+~~~
 
-Risk Score phải được mô tả rõ là một **heuristic đánh giá**, không phải bằng chứng chắc chắn về nguy cơ bảo mật.
-
----
+Risk Score chỉ là **heuristic đánh giá**, không phải bằng chứng chắc chắn về nguy cơ bảo mật.
 
 ## Phần cứng
 
-Prototype cầm tay ban đầu:
-
-```text
+~~~text
 ESP32 DevKit V1
 SSD1306 OLED
-Nút NEXT
-Nút MODE
-LED cảnh báo
+NEXT Button
+MODE Button
+Alert LED
 Breadboard
-```
-
----
+~~~
 
 ## OLED — List View
 
-```text
+~~~text
 IOT SENTINEL
 
 > Unknown-01
@@ -603,13 +553,11 @@ IOT SENTINEL
 
   HomeWiFi
   RSSI -67
-```
-
----
+~~~
 
 ## OLED — Detail View
 
-```text
+~~~text
 UNKNOWN-01
 
 RSSI RAW -52
@@ -621,53 +569,33 @@ CH 6
 SEEN 42
 
 RISK HIGH
-```
-
----
+~~~
 
 ## Thành viên A — Hưng
 
-- Triển khai logic phân loại thiết bị
+- Triển khai classification logic
 - Triển khai Risk Engine
-- Kết nối Device Manager với giao diện
-- Xử lý trạng thái các nút
-- Triển khai chế độ LIST / DETAIL
-- Đảm bảo UI không block quá trình xử lý Wi-Fi
-
----
+- Kết nối Device Manager với UI
+- Xử lý button state
+- Triển khai LIST Mode
+- Triển khai DETAIL Mode
+- Đảm bảo UI không block Wi-Fi processing
 
 ## Thành viên B — Huy
 
 - Kết nối OLED
-- Kết nối các nút bấm
+- Kết nối nút NEXT
+- Kết nối nút MODE
 - Kết nối LED cảnh báo
-- Thiết kế giao diện hiển thị
-- Kiểm tra khả năng đọc OLED
-- Kiểm thử nút bấm
-- Kiểm thử cơ chế cảnh báo
-- Hoàn thiện và làm gọn phần wiring
-
----
-
-## Cấu trúc file đề xuất
-
-```text
-src/
-├── risk_engine.cpp
-└── oled_ui.cpp
-
-include/
-├── risk_engine.h
-└── oled_ui.h
-```
-
----
+- Thiết kế giao diện
+- Kiểm thử OLED
+- Kiểm thử button
+- Kiểm thử alert
+- Làm gọn wiring
 
 ## Điều kiện hoàn thành
 
-Thiết bị có thể hoạt động mà không cần phụ thuộc vào máy tính:
-
-```text
+~~~text
 Khởi động
    ↓
 Thu thập dữ liệu Wi-Fi
@@ -682,8 +610,10 @@ Lọc RSSI
    ↓
 Hiển thị OLED
    ↓
-Phát cảnh báo
-```
+Cảnh báo
+~~~
+
+Thiết bị phải có khả năng hoạt động mà không phụ thuộc vào Serial Monitor.
 
 ---
 
@@ -691,48 +621,50 @@ Phát cảnh báo
 
 ## Mục tiêu
 
-Thay thế prototype Wi-Fi scan đơn giản bằng một tầng quan sát IEEE 802.11 thụ động có khả năng thu thập dữ liệu phong phú hơn.
+Nâng cấp tầng acquisition từ:
 
-Mục tiêu là quan sát hoạt động Wi-Fi vượt ra ngoài danh sách Access Point thu được từ `WiFi.scanNetworks()`.
+~~~text
+WiFi.scanNetworks()
+~~~
 
----
+sang:
 
-## Nguyên tắc kiến trúc quan trọng
+~~~text
+Promiscuous Mode
++
+Channel Hopping
+~~~
 
-Phase này chỉ nên thay:
+để quan sát hoạt động IEEE 802.11 phong phú hơn và không chỉ phụ thuộc vào Access Point scan.
 
-```text
-WiFi Scanner
-```
+## Nguyên tắc kiến trúc
+
+Phase này chỉ thay thế:
+
+~~~text
+Wi-Fi Scanner
+~~~
 
 bằng:
 
-```text
-Promiscuous Sniffer
-```
+~~~text
+Wi-Fi Sniffer
+~~~
 
-mà không phải viết lại:
+Các module sau phải tiếp tục được tái sử dụng:
 
-```text
+~~~text
 Device Manager
 RSSI Filter
 Distance Estimator
 Risk Engine
 OLED
-```
+~~~
 
-Cả hai phương pháp acquisition đều phải tạo ra:
+## Pipeline
 
-```text
-RadioObservation
-```
-
----
-
-## Pipeline Promiscuous Mode
-
-```text
-Khung IEEE 802.11
+~~~text
+IEEE 802.11 Frame
         ↓
 Promiscuous Callback
         ↓
@@ -747,47 +679,37 @@ Timestamp
 RadioObservation
         ↓
 Device Manager
-```
+~~~
 
----
+## Callback Design
 
-## Thiết kế Packet Callback
+Callback phải được giữ nhẹ:
 
-Callback Wi-Fi phải được giữ nhẹ nhất có thể.
-
-Luồng khuyến nghị:
-
-```text
+~~~text
 Nhận Packet
       ↓
-Đọc Metadata cần thiết
+Đọc Metadata
       ↓
-Copy dữ liệu
+Copy dữ liệu cần thiết
       ↓
 Queue / Buffer
       ↓
 Xử lý bên ngoài Callback
-```
+~~~
 
-Không nên thực hiện trực tiếp các công việc nặng như:
+Không nên thực hiện trực tiếp trong callback:
 
-```text
-Vẽ OLED
-Lọc tín hiệu phức tạp
-Tính toán lớn
-```
-
-ngay bên trong callback của Wi-Fi driver.
-
----
+~~~text
+OLED Rendering
+RSSI Filtering phức tạp
+Distance Calculation
+Risk Calculation
+Logging nặng
+~~~
 
 ## Channel Hopping
 
-ESP32 phải có khả năng quan sát nhiều channel Wi-Fi 2.4 GHz.
-
-Khái niệm:
-
-```text
+~~~text
 CH1
  ↓
 CH2
@@ -799,77 +721,56 @@ CH3
 CH13
  ↓
 CH1
-```
+~~~
 
-Thời gian lưu lại trên mỗi channel (**dwell time**) phải có khả năng cấu hình.
+Mỗi channel có một khoảng thời gian quan sát gọi là **dwell time**.
 
-Ví dụ:
+Cần đánh giá sự đánh đổi giữa:
 
-```text
-Ở Channel 1
-      ↓
-Thu thập packet
-      ↓
-Chuyển Channel 2
-      ↓
-Thu thập packet
-      ↓
-...
-```
-
-Cần nghiên cứu sự đánh đổi giữa:
-
-```text
+~~~text
 Dwell Time
-vs
+    vs
 Detection Latency
-```
-
----
+~~~
 
 ## Thành viên A — Hưng
 
-### Firmware Sniffer
+### Sniffer Firmware
 
 - Bật promiscuous mode
-- Cấu hình Wi-Fi packet callback
-- Trích xuất RSSI từ packet
-- Trích xuất địa chỉ MAC
-- Xác định loại frame
-- Thu thập channel
-- Thu thập timestamp
-- Chuyển metadata packet thành `RadioObservation`
-- Triển khai channel hopping
-
----
+- Cấu hình packet callback
+- Trích xuất RSSI
+- Trích xuất MAC
+- Nhận dạng frame type
+- Ghi nhận channel
+- Ghi nhận timestamp
+- Chuyển packet metadata thành `RadioObservation`
+- Triển khai Channel Hopping
 
 ## Thành viên B — Huy
 
-### Phân tích traffic
+### Traffic Analysis
 
-- Đo mức độ hoạt động packet
+- Đếm packet activity
 - Quản lý packet count
-- Đánh giá các observation trùng lặp
-- Phân tích hành vi RSSI
-- Phân tích mức hoạt động theo channel
+- Phân tích observation trùng lặp
+- Phân tích RSSI
+- Phân tích hoạt động giữa các channel
 - Thử nghiệm nhiều dwell time
-- So sánh kết quả giữa Scanner Mode và Sniffer Mode
-
----
+- So sánh Scanner Mode với Sniffer Mode
 
 ## Điều kiện hoàn thành
 
-Phase 4 hoàn thành khi:
-
-- Promiscuous mode hoạt động ổn định
-- Thu được metadata IEEE 802.11 cần thiết
-- Quan sát được địa chỉ MAC
+- Promiscuous Mode hoạt động ổn định
+- Thu được MAC
 - Thu được RSSI
-- Thu được thông tin channel
-- Channel hopping hoạt động
-- Có thể đếm packet activity
-- Observation được chuyển vào Device Manager hiện có
-- Firmware ổn định trong môi trường Wi-Fi thông thường
+- Thu được frame metadata cần thiết
+- Thu được channel
+- Channel Hopping hoạt động
+- Packet count hoạt động
+- Dữ liệu được chuyển sang `RadioObservation`
+- Device Manager cũ tiếp tục hoạt động
+- Firmware không crash trong traffic thông thường
 
 ---
 
@@ -877,25 +778,27 @@ Phase 4 hoàn thành khi:
 
 ## Mục tiêu
 
-Sử dụng lượng thông tin phong phú hơn từ promiscuous mode để nâng cao khả năng theo dõi và đánh giá thiết bị.
+Sử dụng dữ liệu thu được từ promiscuous mode để xây dựng hồ sơ thiết bị chi tiết hơn.
 
----
+Thông tin có thể sử dụng:
 
-## Các thông tin có thể phân tích
-
-```text
+~~~text
+MAC
+RSSI
+Filtered RSSI
 Packet Count
 Frame Type
 Activity Frequency
-RSSI Trend
 Channel
-Persistence
+First Seen
 Last Seen
-```
+Persistence
+RSSI Trend
+~~~
 
 Ví dụ:
 
-```text
+~~~text
 DEVICE
 
 MAC:
@@ -915,57 +818,50 @@ LAST SEEN:
 
 TREND:
 APPROACHING
-```
+~~~
 
----
+## RSSI Trend
 
-## Phân tích xu hướng RSSI
+Có thể bắt đầu từ:
 
-Khái niệm cơ bản:
-
-```text
-RSSI hiện tại - RSSI trước đó
-```
+~~~text
+RSSI hiện tại - RSSI trước
+~~~
 
 Các trạng thái:
 
-```text
+~~~text
 APPROACHING
 STABLE
 MOVING AWAY
-```
+~~~
 
-Trong triển khai thực tế nên sử dụng nhiều mẫu RSSI để xác định xu hướng thay vì chỉ dựa vào chênh lệch giữa hai mẫu liên tiếp.
-
----
+Tuy nhiên phiên bản hoàn chỉnh nên sử dụng nhiều mẫu RSSI để xác định trend thay vì chỉ dùng hai mẫu liên tiếp.
 
 ## Thành viên A — Hưng
 
 - Tích hợp packet metadata vào Device Manager
-- Phân loại và giữ lại các metadata hữu ích
-- Cải thiện state management của thiết bị
+- Phân loại metadata cần thiết
+- Cải thiện state management
 - Tích hợp packet activity vào Risk Engine
-- Tối ưu sử dụng bộ nhớ
-- Cải thiện độ ổn định hệ thống
-
----
+- Tối ưu RAM
+- Tối ưu firmware
+- Kiểm tra độ ổn định hệ thống
 
 ## Thành viên B — Huy
 
 - Phân tích RSSI trend
-- Đánh giá độ dao động RSSI
-- Phân tích hoạt động giữa các channel
-- Thử nghiệm các ngưỡng activity
-- Kiểm thử hành vi của Risk Score
+- Đánh giá RSSI variance
+- Phân tích channel activity
+- Thử nghiệm các activity threshold
+- Kiểm thử Risk Score
 - Thu thập dataset thực nghiệm
-
----
 
 ## Điều kiện hoàn thành
 
 Hệ thống có thể kết hợp:
 
-```text
+~~~text
 Identity
 +
 RSSI
@@ -975,9 +871,9 @@ Persistence
 Activity
 +
 Channel
-```
+~~~
 
-để tạo thành hồ sơ thiết bị phong phú hơn.
+thành một **Device Profile**.
 
 ---
 
@@ -985,32 +881,24 @@ Channel
 
 ## Mục tiêu
 
-Sau khi IoT Sentinel hoạt động ổn định, bổ sung các mạch bán dẫn trực tiếp liên quan đến nội dung ET2041E.
+Sau khi hệ thống IoT Sentinel chính hoạt động ổn định, bổ sung các mạch bán dẫn nhằm thể hiện trực tiếp kiến thức của học phần ET2041E.
 
-Phần Cấu kiện điện tử phải **hỗ trợ sản phẩm**, không được làm mất trọng tâm chính của IoT Sentinel.
-
----
+Phần mở rộng phải hỗ trợ sản phẩm, không được làm mất trọng tâm chính của hệ thống.
 
 ## Linh kiện đề xuất
 
-Phiên bản tối giản:
-
-```text
+~~~text
 2 × BJT 2N2222
 1 × MOSFET 2N7000
-2 × diode 1N4148
-1 × potentiometer
+2 × Diode 1N4148
+1 × Potentiometer
 LED
-điện trở
-```
+Resistors
+~~~
 
----
+## BJT Q1 — Alert Driver
 
-## BJT Q1 — Mạch điều khiển cảnh báo
-
-Ví dụ:
-
-```text
+~~~text
 ESP32 GPIO
     ↓
 Base Resistor
@@ -1018,121 +906,113 @@ Base Resistor
 2N2222
     ↓
 Alert LED
-```
+~~~
 
-Mạch vừa thực hiện chức năng thực tế của sản phẩm, vừa minh họa:
+Mạch thể hiện:
 
-```text
+~~~text
 Cutoff
 Saturation
-```
+~~~
 
----
+đồng thời thực hiện chức năng cảnh báo thực tế.
 
-## BJT Q2 — Mạch khảo sát đặc tính
+## BJT Q2 — Characterization Circuit
 
-Sử dụng potentiometer để thay đổi phân cực base.
+Sử dụng potentiometer để thay đổi base bias.
 
 Đo:
 
-```text
+~~~text
 VB
 VC
 VE
-```
+~~~
 
 Tính:
 
-```text
+~~~text
 VBE = VB - VE
 
 VCE = VC - VE
-```
+~~~
 
-Nếu phù hợp, ước lượng:
+Có thể ước lượng:
 
-```text
+~~~text
 IC
-```
+~~~
 
-từ các thông số mạch collector.
+từ collector resistor.
 
-Phân tích:
+Phân tích các vùng:
 
-```text
+~~~text
 Cutoff Region
 Active Region
 Saturation Region
-```
+~~~
 
 Có thể mở rộng sang:
 
-```text
+~~~text
 DC Load Line
 Operating Point
 Q-Point
-```
-
----
+~~~
 
 ## MOSFET — 2N7000
 
-Sử dụng 2N7000 như một phần tử switching.
+Sử dụng 2N7000 làm switching stage.
 
 So sánh:
 
-```text
+~~~text
 BJT
-Điều khiển theo dòng
+→ điều khiển theo dòng
 
 MOSFET
-Điều khiển theo điện áp
-```
-
----
+→ điều khiển theo điện áp
+~~~
 
 ## Diode — 1N4148
 
-Các ứng dụng có thể khảo sát:
+Có thể khảo sát:
 
-```text
+~~~text
 Protection
 Clamping
 Forward Voltage
-```
-
----
+~~~
 
 ## Thành viên A — Hưng
 
-### Firmware / Tích hợp đo lường
+### Firmware / Measurement Integration
 
-- Đọc tín hiệu ADC nếu cần
-- Xử lý các giá trị điện áp đo được
+- Đọc ADC nếu cần
+- Xử lý giá trị điện áp
 - Tính các đại lượng suy ra
-- Xác định vùng hoạt động của transistor
-- Hiển thị dữ liệu bán dẫn
-- Tích hợp chế độ diagnostic vào firmware
-
----
+- Xác định transistor operating region
+- Hiển thị thông số bán dẫn
+- Tích hợp Diagnostic Mode vào firmware
 
 ## Thành viên B — Huy
 
-### Phần cứng / Thực nghiệm
+### Hardware / Experimental Work
 
 - Lắp mạch BJT
 - Lắp mạch MOSFET
 - Lắp mạch diode
-- Kiểm tra pinout linh kiện
+- Kiểm tra pinout
 - Đo bằng multimeter
-- So sánh lý thuyết và thực nghiệm
-- Thực hiện khảo sát Load Line / Q-point khi phù hợp
+- So sánh lý thuyết với thực nghiệm
+- Khảo sát Q-point / Load Line nếu phù hợp
 
 ---
 
 # 5. Kiến trúc hệ thống hoàn chỉnh
 
-```text
+~~~text
                  IOT SENTINEL
                       │
                       ▼
@@ -1171,17 +1051,17 @@ Forward Voltage
                                 ▼
                          Semiconductor
                           Driver Stage
-```
+~~~
 
 ---
 
 # 6. Mức độ ưu tiên
 
-## P0 — Hệ thống cốt lõi
+## P0 — Core System
 
-Phải hoàn thành trước:
+Bắt buộc hoàn thành trước:
 
-```text
+~~~text
 Wi-Fi Acquisition
 RadioObservation
 MAC/BSSID Processing
@@ -1190,14 +1070,12 @@ RSSI History
 RSSI Filtering
 Distance Estimation
 Stable Firmware
-```
+~~~
 
----
+## P1 — Chức năng chính
 
-## P1 — Chức năng chính của sản phẩm
-
-```text
-KNOWN / UNKNOWN Classification
+~~~text
+KNOWN / UNKNOWN
 Risk Evaluation
 OLED
 Buttons
@@ -1205,13 +1083,11 @@ Alert
 Promiscuous Mode
 Channel Hopping
 Packet Activity
-```
-
----
+~~~
 
 ## P2 — Phần mở rộng
 
-```text
+~~~text
 RSSI Trend Analysis
 Advanced Activity Analysis
 Semiconductor Diagnostics
@@ -1220,15 +1096,15 @@ MOSFET Experiment
 Diode Experiment
 Enclosure
 Advanced UI
-```
+~~~
 
-Các tính năng P2 không được làm chậm việc hoàn thành hệ thống P0.
+Các tính năng P2 không được làm chậm việc hoàn thành P0.
 
 ---
 
 # 7. Cấu trúc Repository đề xuất
 
-```text
+~~~text
 iot-sentinel/
 │
 ├── README.md
@@ -1267,17 +1143,17 @@ iot-sentinel/
 └── data/
     ├── calibration/
     └── experiments/
-```
+~~~
 
 ---
 
 # 8. Quy trình Git
 
-Không nên phát triển trực tiếp trên branch `main`.
+Không phát triển trực tiếp trên branch `main`.
 
 Các branch đề xuất:
 
-```text
+~~~text
 main
 │
 ├── feature/wifi-scanner
@@ -1288,11 +1164,11 @@ main
 ├── feature/wifi-sniffer
 ├── feature/channel-hopping
 └── feature/et2041e-hardware
-```
+~~~
 
 Workflow:
 
-```text
+~~~text
 Tạo Feature Branch
         ↓
 Triển khai Feature
@@ -1306,11 +1182,11 @@ Push
 Review chéo
         ↓
 Merge vào Main
-```
+~~~
 
-Ví dụ commit:
+Ví dụ commit message:
 
-```text
+~~~text
 feat: add wifi scanning
 feat: add radio observation structure
 feat: add device tracking
@@ -1321,31 +1197,31 @@ feat: add channel hopping
 fix: prevent duplicate device entries
 test: add RSSI calibration data
 docs: update project architecture
-```
+~~~
 
 ---
 
 # 9. Chiến lược phát triển
 
-Project luôn phải duy trì:
+Luôn duy trì:
 
-```text
+~~~text
 MỘT PHIÊN BẢN ĐANG HOẠT ĐỘNG
              +
 MỘT TÍNH NĂNG ĐANG PHÁT TRIỂN
-```
+~~~
 
-Tránh tình trạng:
+Tránh:
 
-```text
-Nhiều tính năng chưa hoàn thành
-             +
-Không còn phiên bản ổn định để demo
-```
+~~~text
+NHIỀU TÍNH NĂNG DỞ DANG
+          +
+KHÔNG CÓ BẢN ỔN ĐỊNH
+~~~
 
-Thứ tự phát triển đề xuất:
+Thứ tự phát triển:
 
-```text
+~~~text
 Make it work
       ↓
 Make it measurable
@@ -1357,11 +1233,11 @@ Make it reliable
 Make it advanced
       ↓
 Make it presentable
-```
+~~~
 
-Tức là:
+Tương ứng:
 
-```text
+~~~text
 Làm cho chạy được
       ↓
 Làm cho đo được
@@ -1370,30 +1246,28 @@ Module hóa
       ↓
 Làm cho ổn định
       ↓
-Nâng cao tính năng
+Nâng cấp tính năng
       ↓
 Hoàn thiện sản phẩm
-```
+~~~
 
 ---
 
 # 10. Các mốc phát triển
 
-## M1 — Prototype thu thập dữ liệu vô tuyến
+## M1 — Prototype thu thập dữ liệu
 
-```text
+~~~text
 ESP32
   ↓
 WiFi.scanNetworks()
   ↓
 RadioObservation
-```
+~~~
 
----
+## M2 — Theo dõi và xử lý tín hiệu
 
-## M2 — Theo dõi thiết bị và xử lý tín hiệu
-
-```text
+~~~text
 RadioObservation
        ↓
 Device Manager
@@ -1401,39 +1275,33 @@ Device Manager
 RSSI Filter
        ↓
 DIST EST
-```
-
----
+~~~
 
 ## M3 — Prototype cầm tay
 
-```text
+~~~text
 Device Analysis
       ↓
 Risk Engine
       ↓
 OLED + Buttons + Alert
-```
+~~~
 
----
+## M4 — Passive Wi-Fi Monitoring
 
-## M4 — Giám sát Wi-Fi thụ động
-
-```text
+~~~text
 Promiscuous Mode
        +
 Channel Hopping
        ↓
 RadioObservation
-```
+~~~
 
-Pipeline xử lý đã xây dựng trước đó phải tiếp tục được tái sử dụng.
+Pipeline đã xây dựng ở các phase trước phải tiếp tục được tái sử dụng.
 
----
+## M5 — Advanced Device Analysis
 
-## M5 — Phân tích thiết bị nâng cao
-
-```text
+~~~text
 MAC
 +
 RSSI
@@ -1445,13 +1313,11 @@ Persistence
 Channel
 ↓
 Device Profile
-```
+~~~
 
----
+## M6 — ET2041E Extension
 
-## M6 — Mở rộng ET2041E
-
-```text
+~~~text
 IoT Sentinel
       +
 Diode
@@ -1461,50 +1327,42 @@ BJT
 MOSFET
       +
 Experimental Measurements
-```
+~~~
 
 ---
 
 # 11. Trạng thái phát triển hiện tại
 
-Trọng tâm hiện tại:
+Hiện tại nhóm đang ở:
 
-```text
+~~~text
 PHASE 1
 Prototype thu thập dữ liệu Wi-Fi
-```
-
----
+~~~
 
 ## Hưng — Thành viên A
 
-Công việc hiện tại:
-
-```text
+~~~text
 [ ] Triển khai WiFi.scanNetworks()
 [ ] Đọc SSID
 [ ] Đọc BSSID
 [ ] Đọc RSSI
 [ ] Đọc channel
 [ ] Thêm timestamp
-[ ] Tạo cấu trúc RadioObservation
+[ ] Tạo RadioObservation
 [ ] Chuyển kết quả scan thành RadioObservation
 [ ] Triển khai scan định kỳ
-```
-
----
+~~~
 
 ## Huy — Thành viên B
 
-Công việc hiện tại:
-
-```text
+~~~text
 [ ] Kiểm thử Wi-Fi scanning
 [ ] Ghi nhận dao động RSSI
 [ ] So sánh RSSI tại nhiều vị trí
 [ ] Ghi lại các channel quan sát được
 [ ] Thu thập dữ liệu test ban đầu
 [ ] Chuẩn bị thí nghiệm hiệu chuẩn RSSI
-```
+~~~
 
-Chỉ chuyển sang **Phase 2** sau khi **Phase 1 đã hoạt động ổn định**.
+> Chỉ chuyển sang **Phase 2** sau khi **Phase 1 hoạt động ổn định**.
