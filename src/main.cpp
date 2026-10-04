@@ -1,57 +1,35 @@
 #include <Arduino.h>
-#include <WiFi.h>
 
-unsigned long previousScan = 0;
+#include "wifi_scanner.h"
 
-constexpr float RSSI_AT_1M = -45.0;
-constexpr float PATH_LOSS_N = 2.4;
-
-float estimateDistance(int rssi) {
-    float exponent =
-        (RSSI_AT_1M - rssi) /
-        (10.0 * PATH_LOSS_N);
-
-    return pow(10.0, exponent);
-}
-
-void scanWiFi() {
-    Serial.println();
-    Serial.println("=== SCANNING ===");
-
-    int n = WiFi.scanNetworks();
-
-    for (int i = 0; i < n; i++) {
-        Serial.printf(
-            "%d. %s | RSSI %d dBm | CH %d\n",
-            i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i), WiFi.channel(i)
-        );
-        Serial.printf(
-            "   Estimated distance: %.2f meters\n",
-            estimateDistance(WiFi.RSSI(i))
-        );
-
-    }
-
-    WiFi.scanDelete();
-}
+WiFiScanner wifiScanner(5000);
 
 void setup() {
     Serial.begin(115200);
     delay(1000);
-
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-
+    wifiScanner.begin();
     Serial.println("IoT Sentinel started");
 }
 
 void loop() {
-    unsigned long now = millis();
+    if (wifiScanner.update()) {
 
-    if (now - previousScan >= 5000) {
-        previousScan = now;
+        const auto* observations = wifiScanner.observations();
+        const size_t count = wifiScanner.observationCount();
 
-        scanWiFi();
+
+        if (count <= 0) {
+            Serial.printf("No WiFi networks found\n");
+        } 
+        else {
+            Serial.printf("=== WIFI SCAN ===\n");
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            Serial.printf("[%zu]\n", i + 1);
+
+            WiFiScanner::printObservation(observations[i]);
+
+        }
     }
-    
 }
