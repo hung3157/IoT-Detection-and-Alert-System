@@ -8,22 +8,15 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
     wifiScanner.begin();
-    Serial.println("IoT Sentinel started");
+    Serial.println("\n**** IoT Sentinel started ****\n");
 }
 
 void loop() {
-    if (wifiScanner.update()) {
+    if (wifiScanner.scanOnce()) {
 
         const auto* observations = wifiScanner.observations();
         const size_t count = wifiScanner.observationCount();
-
-
-        if (count <= 0) {
-            Serial.printf("No WiFi networks found\n");
-        } 
-        else {
-            Serial.printf("=== WIFI SCAN ===\n");
-        }
+        Serial.printf("\n=== %d NETWORK FOUND ===\n", count);
 
         for (size_t i = 0; i < count; ++i) {
             Serial.printf("[%zu]\n", i + 1);
@@ -32,4 +25,8 @@ void loop() {
 
         }
     }
+    else { 
+        Serial.printf("\n=== !!! NO NETWORK FOUND !!! ===\n");
+    }
 }
+

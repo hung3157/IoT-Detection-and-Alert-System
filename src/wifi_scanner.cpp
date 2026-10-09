@@ -68,6 +68,7 @@ bool WiFiScanner::scanOnce() {
     return observationCount_;
 }
 
+/*
 bool WiFiScanner::update() {
     unsigned long now = millis();
     if ((now - lastScanMs_) >= scanIntervalMs_) {
@@ -76,7 +77,7 @@ bool WiFiScanner::update() {
     }
     return 0;
 }
-
+*/
 const RadioObservation* WiFiScanner::observations() const {
     return observations_;
 }
